@@ -7,8 +7,19 @@ import TodoMain from "./TodoMain";
 import { TODO_URL } from "../../config/host-config";
 
 import {getCurrentLoginUser} from "../../util/login-util";
+import {useNavigate} from "react-router-dom";
+
+// 부트스트랩 로딩
+import 'bootstrap/dist/css/bootstrap.min.css';
+
+import { Spinner } from "reactstrap";
 
 const TodoTemplate = () => {
+
+    const redirection = useNavigate();
+
+    // 로딩 완료 상태값 관리
+    const [loading, setLoading] = useState(true);
 
   // 토큰 가져오기
   const [token, setToken] = useState(getCurrentLoginUser().token);
@@ -122,21 +133,52 @@ const TodoTemplate = () => {
       method: 'GET',
       headers: requestHeader
     })
-        .then(res => res.json())
+        .then(res => {
+            if(res.status === 200) return res.json();
+            else if (res.status === 403) {
+                alert('로그인이 필요한 서비스입니다.');
+                redirection('/login');
+                return;
+            } else {
+                alert('서버가 불안정합니다.');
+                return;
+            }
+        })
         .then(json => {
-          // console.log(json);
-          setTodoList(json.todos);
+            // console.log(json);
+            if(!json) return;
+
+            setTodoList(json.todos);
+
+            // 로딩 완료 처리
+            setLoading(false);
         });
 
   }, []);
 
+  // 로딩이 끝난 후 보여줄 화면
+    const loadEndedPage = (
+        <div className='TodoTemplate'>
+            <TodoHeader count={countRestTodo}/>
+            <TodoMain todoList={todoList} onRemove={removeTodo} onCheck={checkTodo}/>
+            <TodoInput onAdd={addTodo}/>
+        </div>
+    )
+
+    // 로딩 중일때 보여줄 페이지
+    const loadingpage = (
+        <div className='loading'>
+            <Spinner>
+                loading ...
+            </Spinner>
+        </div>
+    )
+
 
   return (
-      <div className='TodoTemplate'>
-        <TodoHeader count={countRestTodo}/>
-        <TodoMain todoList={todoList} onRemove={removeTodo} onCheck={checkTodo}/>
-        <TodoInput onAdd={addTodo}/>
-      </div>
+      <>
+          { loading ? loadingpage : loadEndedPage }
+      </>
   );
 };
 
